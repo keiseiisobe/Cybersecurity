@@ -1,0 +1,89 @@
+#! /usr/bin/python3
+
+import argparse
+import requests
+from urllib import parse
+from pathlib import Path
+from os import path
+from bs4 import BeautifulSoup
+
+def get_filename_from_url(url):
+    out = parse.urlparse(url)
+    filename = path.basename(out.path)
+    if filename == "":
+        filename = "index.html"
+    return filename
+                
+def extract_all_images_from_a_website(url):
+    # get HTML response
+    print(f"requesting web page from {url}")
+    res = requests.get(url)
+    print(f"received response with status code {res.status_code}")
+    out = parse.urlparse(url)
+    scheme = out.scheme
+    netloc = out.netloc
+
+    global depth
+    print(f"depth: {depth}")
+
+    # extract image urls from html contents
+    soup = BeautifulSoup(res.content, "html.parser")
+    for imgtag in soup.find_all("img"):
+        imgurl = imgtag["src"]
+        if imgurl == "":
+            continue
+        # create image url
+        imgout = parse.urlparse(imgurl)
+        if imgout.scheme == "":
+            imgout = imgout._replace(scheme=scheme)
+        if imgout.netloc == "":
+            imgout = imgout._replace(netloc=netloc)
+        filename = get_filename_from_url(imgurl)
+        # check if the file extension is permitted
+        ext = path.splitext(filename)[1]
+        default_exts = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+        if not ext in default_exts:
+            continue
+        # get raw image data
+        imgres = requests.get(imgout.geturl())
+        # save it
+        print(f"saving {imgout.geturl()} at {args.path}")
+        with open(args.path + '/' + filename, "wb") as f:
+            for chunk in imgres.iter_content(chunk_size=128):
+                f.write(chunk)
+
+    if depth >= args.level:
+        return
+
+    depth += 1
+    for atag in soup.find_all("a"):
+        href = atag["href"]
+        if href == "":
+            continue
+        # create hyperlink url
+        hrefout = parse.urlparse(href)
+        if hrefout.scheme == "":
+            hrefout = hrefout._replace(scheme=scheme)
+        if hrefout.netloc == "":
+            hrefout = hrefout._replace(netloc=netloc)
+        extract_all_images_from_a_website(hrefout.geturl())
+    depth -= 1
+
+if __name__ == "__main__":
+    # handle command line arguments
+    parser = argparse.ArgumentParser(
+        prog="Spider",
+        usage="Extract the images from a website."
+    )
+    parser.add_argument("URL")
+    parser.add_argument("-r", "--recursive", action="store_true", help="recursively downloads the images in a URL")
+    parser.add_argument("-l", "--level", default=5, type=int, help="indicates the maximum depth level of the recursive download")
+    parser.add_argument("-p", "--path", default="./data/", help="indicates the path where the downloaded files will be saved")
+    args = parser.parse_args()
+
+    # create directory if not exist
+    Path(args.path).mkdir(parents=True, exist_ok=True)
+
+    # if recursive is False, we won't go deeper. Just see first web site.
+    depth = 1 if args.recursive else args.level
+    extract_all_images_from_a_website(args.URL)

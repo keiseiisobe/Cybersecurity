@@ -1,0 +1,15 @@
+# structure
+a.html → b.html → c.html → d.html → e.html
+            ↓       ↓
+	 b2.html  c2.html
+	          c3.html
+
+# images
+a.html: michelin
+b.html: mr.peanut
+b2.html: morton-solt-girl
+c.html: tiger
+c2.html: sonic
+c3.html: quoker-oats
+d.html: firefox, duracell
+e.html: doughboy, brawny-man, geico

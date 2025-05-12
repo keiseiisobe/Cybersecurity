@@ -1,0 +1,36 @@
+#! /usr/bin/python3
+
+from os import path
+import time
+import argparse
+from PIL import Image, ExifTags
+from PIL.ExifTags import TAGS
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="Scorpion",
+        usage="Parse images for EXIF and other metadata, and display them"
+    )
+
+    parser.add_argument("filename", nargs="+")
+    args = parser.parse_args()
+
+    for file in args.filename:
+        with Image.open(file) as im:
+            metadata = {
+                "filename": im.filename,
+                "creation date": time.ctime(path.getctime(file)),
+                "format": im.format,
+                "mode": im.mode,
+                "size": im.size,
+                "width": im.width,
+                "height": im.height,
+            }
+            print("Metadata:")
+            for k, v in metadata.items():
+                print(f"{' '*3}{k}: {v}")
+            print("EXIF data:")
+            exif_data = im.getexif()
+            for k, v in exif_data.items():
+                print(f"{' '*3}{TAGS[k]}: {v}")
+            print("")
