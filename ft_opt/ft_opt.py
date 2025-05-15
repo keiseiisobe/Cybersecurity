@@ -1,0 +1,81 @@
+#! /usr/bin/python3
+
+import argparse
+import hmac
+import codecs
+import time
+import qrcode
+
+def count_n_chars_in_file(filename):
+    with open(filename, "r") as f:
+        data = f.read()
+        return len(data)
+
+def is_hex_in_file(filename):
+    with open(filename, "r") as f:
+        data = f.read()
+        return re.search(r"^[0-9A-F]+$", data) != None
+
+def encrypt_key_in_file(filename):
+    with open(filename, "rb") as f:
+        data = f.read()
+    return codecs.encode(data, encoding="hex")
+
+def decrypt_key_in_file(filename):
+    with open(filename, "rb") as f:
+        data = f.read()
+    return codecs.decode(data, encoding="hex")
+
+def dynamic_trancation(key: str):
+    '''
+    see section5.3 in RFC 4226
+    '''
+    offset = key[19] & 0xf
+    res = (key[offset] & 0x7f) << 24 | (key[offset+1] & 0xff) << 16 | (key[offset+2] & 0xff) << 8 | (key[offset+3] & 0xff)
+    return res
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="ft_opt",
+        usage="Stores an initial password, and generates a new one time password every time it is requested"
+    )
+
+    parser.add_argument("-g", "--generate")
+    parser.add_argument("-k", "--key")
+    args = parser.parse_args()
+
+    if args.generate != None:
+        '''
+        see section2 in RFC 2104 to understand the meanings of the length of keys(more than 63 in this case).
+
+        The authentication key K can be of any length up to B, the
+        block length of the hash function.  Applications that use keys longer
+        than B bytes will first hash the key using H and then use the
+        resultant L byte string as the actual key to HMAC. In any case the
+        minimal recommended length for K is L bytes (as the hash output
+        length).
+        '''
+        if count_n_chars_in_file(args.generate) < 64 or not is_hex_in_file(args.generate):
+            print("./ft_otp: error: key must be 64 hexadecimal characters.")
+        else:
+            encrypted_key = encrypt_key_in_file(args.generate)
+            key_file = "ft_opt.key"
+            with open(key_file, "wb") as f:
+                f.write(encrypted_key)
+            print(f"Key was successfully saved in {key_file}.")
+            img = qrcode.make(encrypted_key)
+            img_file = "ft_opt.png"
+            img.save(img_file)
+            print(f"QR code was successfully saved in {img_file}")
+            
+    elif args.key != None:
+        decrypted_key = decrypt_key_in_file(args.key)
+        '''
+        see section4.2 in RFC 6238 to understand what time-based OTP means
+        '''
+        t = int(time.time()) / 30
+        hmac_value = hmac.new(key=decrypted_key, msg=int(t).to_bytes(length=8, byteorder="big"), digestmod="sha1").digest()
+        snum = dynamic_trancation(hmac_value)
+        HOTP_value = snum % 10**6
+        print(f"{HOTP_value:06d}")
+ 
