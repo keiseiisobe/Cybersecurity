@@ -2,6 +2,7 @@
 
 import argparse
 import hmac
+import re
 import codecs
 import time
 import qrcode
@@ -14,7 +15,7 @@ def count_n_chars_in_file(filename):
 def is_hex_in_file(filename):
     with open(filename, "r") as f:
         data = f.read()
-        return re.search(r"^[0-9A-F]+$", data) != None
+        return re.search(r"^[0-9a-fA-F]+$", data) is not None
 
 def encrypt_key_in_file(filename):
     with open(filename, "rb") as f:
@@ -26,7 +27,7 @@ def decrypt_key_in_file(filename):
         data = f.read()
     return codecs.decode(data, encoding="hex")
 
-def dynamic_trancation(key: str):
+def dynamic_truncation(key: bytes):
     '''
     see section5.3 in RFC 4226
     '''
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         minimal recommended length for K is L bytes (as the hash output
         length).
         '''
-        if count_n_chars_in_file(args.generate) < 64 or not is_hex_in_file(args.generate):
+        if count_n_chars_in_file(args.generate) != 64 or not is_hex_in_file(args.generate):
             print("./ft_otp: error: key must be 64 hexadecimal characters.")
         else:
             encrypted_key = encrypt_key_in_file(args.generate)
@@ -73,9 +74,9 @@ if __name__ == "__main__":
         '''
         see section4.2 in RFC 6238 to understand what time-based OTP means
         '''
-        t = int(time.time()) / 30
-        hmac_value = hmac.new(key=decrypted_key, msg=int(t).to_bytes(length=8, byteorder="big"), digestmod="sha1").digest()
-        snum = dynamic_trancation(hmac_value)
+        t = int(time.time()) // 30
+        hmac_value = hmac.new(key=decrypted_key, msg=t.to_bytes(length=8, byteorder="big"), digestmod="sha1").digest()
+        snum = dynamic_truncation(hmac_value)
         HOTP_value = snum % 10**6
         print(f"{HOTP_value:06d}")
  
