@@ -67,7 +67,7 @@ if __name__ == "__main__":
             img = qrcode.make(encrypted_key)
             img_file = "ft_opt.png"
             img.save(img_file)
-            print(f"QR code was successfully saved in {img_file}")
+            print(f"QR code was successfully saved in {img_file}.")
             
     elif args.key != None:
         decrypted_key = decrypt_key_in_file(args.key)
