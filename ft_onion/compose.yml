@@ -1,0 +1,16 @@
+services:
+  web:
+    build: ./nginx
+    volumes:
+      - ./nginx/html:/usr/share/nginx/html
+    networks:
+      - tor-network
+  tor:
+    build: ./tor
+    volumes:
+      - ./tor/data:/var/lib/tor
+    networks:
+      - tor-network
+
+networks:
+  tor-network:
