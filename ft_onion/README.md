@@ -12,7 +12,8 @@ See https://community.torproject.org/onion-services/ to understand hidden servic
 # if you don't have SSH key
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
 
-cp ~/.ssh/id_rsa.pub ~/ft_onion/nginx/secrets/authorized_keys
+mkdir -p ~/ft_onion/nginx/secrets
+cp ~/.ssh/id_rsa.pub ~/ft_onion/nginx/secrets/
 docker compose up
 ```
 
