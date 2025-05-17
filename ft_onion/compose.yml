@@ -1,8 +1,9 @@
 services:
   web:
     build: ./nginx
-    volumes:
-      - ./nginx/html:/usr/share/nginx/html
+    ports:
+      - "80:80"
+      - "4242:4242"
     networks:
       - tor-network
   tor:
@@ -14,3 +15,4 @@ services:
 
 networks:
   tor-network:
+  
