@@ -3,6 +3,6 @@
 ## execute
 ```bash
 cd Reverse_me
-docker build -t retdec - < Dockerfile
-docker run -it -v ./submit:/home/retdec retdec /bin/bash
+docker build -t ubuntu .
+docker run -it -v ./submit:/home/ubuntu ubuntu /bin/bash
 ```
