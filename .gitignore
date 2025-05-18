@@ -1,6 +1,8 @@
 secrets/
 data/
 
+# macos
+.DS_Store
 
 # -*- mode: gitignore; -*-
 *~
