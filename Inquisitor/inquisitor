@@ -1,0 +1,13 @@
+#! /usr/local/bin/python3
+
+import argparse
+
+if __name__ == "__main__":
+    # parse four command line arguments
+    parser = argparse.ArgumentParser(description="Inquisitor: a program that performs ARP poisoning.")
+    parser.add_argument("IP-src")
+    parser.add_argument("MAC-src")
+    parser.add_argument("IP-target")
+    parser.add_argument("MAC-target")
+    args = parser.parse_args()
+    print(args)
