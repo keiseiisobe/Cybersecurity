@@ -1,5 +1,6 @@
 secrets/
-data/
+my_website/
+.tor/
 
 # macos
 .DS_Store

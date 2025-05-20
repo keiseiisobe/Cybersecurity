@@ -1,8 +1,5 @@
-run:
-	docker run -it inquisitor /bin/bash
+up:
+	docker compose up
 
 build:
-	docker build -t inquisitor .
-
-all: build run
-
+	docker compose up --build
