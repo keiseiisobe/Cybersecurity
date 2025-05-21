@@ -28,7 +28,9 @@ client-build:
 	docker build -t ftp_client ./ftp_client
 
 spoofer:
-	docker run --rm -it --name spoofer spoofer /bin/bash
+	docker run --rm -it --name spoofer \
+	-v ./spoofer/scripts:/home/inquisitor/ \
+	spoofer /bin/bash
 
 spoofer-build:
 	docker build -t spoofer ./spoofer
@@ -36,3 +38,4 @@ spoofer-build:
 info:
 	docker network inspect bridge | jq -r '.[0].Containers[] | "\(.Name): MAC=\(.MacAddress), IP=\(.IPv4Address)"'
 
+.PHONY: help server server-down client client-build spoofer spoofer-build info

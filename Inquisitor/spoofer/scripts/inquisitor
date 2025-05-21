@@ -1,0 +1,35 @@
+#! /usr/local/bin/python3
+
+import argparse
+import pcapy
+import select
+
+if __name__ == "__main__":
+    # parse four command line arguments
+    parser = argparse.ArgumentParser(description="Inquisitor: a program that performs ARP poisoning.")
+    parser.add_argument("IP-src")
+    parser.add_argument("MAC-src")
+    parser.add_argument("IP-target")
+    parser.add_argument("MAC-target")
+    args = parser.parse_args()
+    print(args)
+
+    # get the interface name
+    device = pcapy.findalldevs()[0]
+    print(f"Devices: {device}")
+    # open the device
+    pcap = pcapy.open_live(device, 65536, 1, 0)
+    # start sniffing
+    while True:
+        try:
+            # fd = pcap.getfd()
+            # rlist, _, _ = select.select([fd], [], [], 1)
+            # if fd in rlist:
+            # get the packet
+            (header, packet) = pcap.next()
+            # print the packet
+            print(f"Packet: {packet}")
+        except KeyboardInterrupt:
+            print("Exiting...")
+            break
+
