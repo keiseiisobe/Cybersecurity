@@ -20,7 +20,7 @@ server-down:
 	docker stop ftpd_server
 
 client:
-	docker run --rm -it --name ftp__client \
+	docker run --rm -it --name ftp_client \
 	-v ./ftp_client/data:/home/ubuntu/ \
 	ftp_client /bin/bash
 

