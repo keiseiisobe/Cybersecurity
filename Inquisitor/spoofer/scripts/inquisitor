@@ -3,7 +3,7 @@
 import argparse
 import ipaddress
 import re
-from scapy.all import sniff, send, ARP, TCP, Raw
+from scapy.all import sniff, send, Ether, ARP, TCP, Raw
 from uuid import getnode
 from signal import signal, SIGINT
 
