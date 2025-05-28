@@ -3,6 +3,12 @@ A program that performs an SQL injection.
 
 ## execute
 ```bash
+# for DVWA
+shell % ./vaccine http://localhost:4280/vulnerabilities/sqli/
+
+# for sqlite-injection
+shell % ./vaccine -X POST http://localhost:8000
+
 shell % ./vaccine -h
 usage: vaccine [-h] [-o OUT] [-X {GET,POST}] URL
 

