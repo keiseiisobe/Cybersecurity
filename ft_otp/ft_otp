@@ -37,7 +37,7 @@ def dynamic_truncation(key: bytes):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="ft_opt",
+        prog="ft_otp",
         usage="Stores an initial password, and generates a new one time password every time it is requested"
     )
 
@@ -60,12 +60,12 @@ if __name__ == "__main__":
             print("./ft_otp: error: key must be 64 hexadecimal characters.")
         else:
             encrypted_key = encrypt_key_in_file(args.generate)
-            key_file = "ft_opt.key"
+            key_file = "ft_otp.key"
             with open(key_file, "wb") as f:
                 f.write(encrypted_key)
             print(f"Key was successfully saved in {key_file}.")
             img = qrcode.make(encrypted_key)
-            img_file = "ft_opt.png"
+            img_file = "ft_otp.png"
             img.save(img_file)
             print(f"QR code was successfully saved in {img_file}.")
             

@@ -1,4 +1,4 @@
-# ft_opt 🗝️
+# ft_otp 🗝️
 A script that generates a new one time password every time it is requested.
 
 ## execute
@@ -7,18 +7,18 @@ A script that generates a new one time password every time it is requested.
 shell % cat key.hex 
 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF%
 
-shell % ./ft_opt -g key.hex 
-Key was successfully saved in ft_opt.key.
-QR code was successfully saved in ft_opt.png.
+shell % ./ft_otp -g key.hex 
+Key was successfully saved in ft_otp.key.
+QR code was successfully saved in ft_otp.png.
 
 #  generates a new temporary password based on the key given as argument.
-shell % ./ft_opt -k ft_opt.key 
+shell % ./ft_otp -k ft_otp.key 
 218357
 ```
 
 ## help
 ```bash
-shell % ./ft_opt -h
+shell % ./ft_otp -h
 usage: Stores an initial password, and generates a new one time password every time it is requested
 
 optional arguments:
